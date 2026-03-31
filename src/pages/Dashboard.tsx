@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import Navbar from "@/components/landing/Navbar";
 import TrustScoreRing from "@/components/landing/TrustScoreRing";
+import APIKeysManager from "@/components/dashboard/APIKeysManager";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ShieldCheck,
   AlertTriangle,
