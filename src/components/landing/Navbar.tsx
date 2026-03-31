@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
