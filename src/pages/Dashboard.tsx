@@ -41,12 +41,14 @@ const stats = [
 ];
 
 const Dashboard = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-24 pb-12 container mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-display font-bold mb-2">Identity Dashboard</h1>
+          <h1 className="text-3xl font-display font-bold mb-1">Welcome back{user?.user_metadata?.display_name ? `, ${user.user_metadata.display_name}` : ""}</h1>
           <p className="text-muted-foreground mb-8">Real-time verification intelligence & trust monitoring</p>
         </motion.div>
 
