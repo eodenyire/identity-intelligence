@@ -52,8 +52,20 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm">Sign In</Button>
-          <Button variant="hero" size="sm">Get API Key</Button>
+          {user ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
+              <Button variant="hero-outline" size="sm" onClick={signOut}>
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>Sign In</Button>
+              <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>Get API Key</Button>
+            </>
+          )}
         </div>
 
         <button className="md:hidden text-foreground" onClick={() => setIsOpen(!isOpen)}>
