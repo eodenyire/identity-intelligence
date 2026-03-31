@@ -207,6 +207,16 @@ const Dashboard = () => {
             </div>
           ))}
         </motion.div>
+
+        {/* API Keys Management */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="glass rounded-xl p-6 mt-8"
+        >
+          <APIKeysManager />
+        </motion.div>
       </div>
     </div>
   );
