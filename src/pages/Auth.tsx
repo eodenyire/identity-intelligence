@@ -188,6 +188,14 @@ const Auth = () => {
                 </div>
               </div>
 
+              {mode === "login" && (
+                <div className="text-right">
+                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 variant="hero"
