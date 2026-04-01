@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Shield, Menu, X, LogOut } from "lucide-react";
+import { Shield, Menu, X, LogOut, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +56,9 @@ const Navbar = () => {
           {user ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+                <Settings className="w-4 h-4" />
+              </Button>
               <Button variant="hero-outline" size="sm" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
                 Sign Out
