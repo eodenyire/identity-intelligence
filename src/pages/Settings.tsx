@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,13 +6,15 @@ import Navbar from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Building2, Save, Loader2 } from "lucide-react";
+import { User, Building2, Save, Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 const Settings = () => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [company, setCompany] = useState("");
@@ -35,6 +37,44 @@ const Settings = () => {
     }
     if (error) console.error("Error fetching profile:", error);
     setLoading(false);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+
+    setUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${user.id}/avatar.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error("Failed to upload avatar");
+      console.error(uploadError);
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    setAvatarUrl(publicUrl);
+    setUploading(false);
+    toast.success("Avatar uploaded");
   };
 
   const handleSave = async () => {
@@ -83,18 +123,44 @@ const Settings = () => {
           transition={{ delay: 0.1 }}
           className="glass rounded-xl p-6 space-y-6"
         >
-          {/* Avatar Preview */}
+          {/* Avatar Upload */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="relative w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border group cursor-pointer"
+            >
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <User className="w-8 h-8 text-muted-foreground" />
               )}
-            </div>
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploading ? (
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5 text-white" />
+                )}
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
             <div>
               <p className="text-sm font-semibold text-foreground">{displayName || "Your Name"}</p>
               <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs text-primary hover:underline mt-1"
+              >
+                {uploading ? "Uploading..." : "Change avatar"}
+              </button>
             </div>
           </div>
 
@@ -111,17 +177,6 @@ const Settings = () => {
                   className="pl-10 bg-secondary/50 border-border"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="avatarUrl">Avatar URL</Label>
-              <Input
-                id="avatarUrl"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/avatar.png"
-                className="bg-secondary/50 border-border"
-              />
             </div>
 
             <div className="space-y-2">
