@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Settings from "./pages/Settings.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
