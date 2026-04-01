@@ -56,6 +56,9 @@ const Navbar = () => {
           {user ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+                <Settings className="w-4 h-4" />
+              </Button>
               <Button variant="hero-outline" size="sm" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
                 Sign Out
