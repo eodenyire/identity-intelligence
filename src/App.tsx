@@ -13,6 +13,7 @@ import Settings from "./pages/Settings.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import IdentityGraphPage from "./pages/IdentityGraph.tsx";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,11 @@ const App = () => (
             <Route path="/analytics" element={
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/identity-graph" element={
+              <ProtectedRoute>
+                <IdentityGraphPage />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
