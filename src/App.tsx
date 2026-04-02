@@ -39,6 +39,11 @@ const App = () => (
                 <Analytics />
               </ProtectedRoute>
             } />
+            <Route path="/identity-graph" element={
+              <ProtectedRoute>
+                <IdentityGraphPage />
+              </ProtectedRoute>
+            } />
             <Route path="/settings" element={
               <ProtectedRoute>
                 <Settings />
