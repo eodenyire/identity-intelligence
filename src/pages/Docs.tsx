@@ -165,6 +165,29 @@ const Docs = () => {
 
         {/* Main content */}
         <main className="flex-1 lg:ml-64 px-4 sm:px-8 py-10 max-w-4xl">
+          {/* Mobile search */}
+          <div className="lg:hidden relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search docs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-10 text-sm bg-secondary/30 border-border"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {searchQuery && filteredSections.length === 0 && (
+            <div className="text-center py-20 text-muted-foreground">
+              <Search className="w-10 h-10 mx-auto mb-4 opacity-40" />
+              <p className="text-lg font-medium">No results for "{searchQuery}"</p>
+              <p className="text-sm mt-1">Try searching for "kyc", "webhook", or "sdk"</p>
+            </div>
+          )}
           {/* Getting Started */}
           <section id="getting-started" className="mb-20">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
