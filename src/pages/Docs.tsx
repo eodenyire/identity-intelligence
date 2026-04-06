@@ -1,18 +1,19 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search } from "lucide-react";
+import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const sidebarSections = [
-  { id: "getting-started", label: "Getting Started", icon: Zap },
-  { id: "authentication", label: "Authentication", icon: Key },
-  { id: "verify-identity", label: "Verify Identity", icon: ShieldCheck },
-  { id: "trust-score", label: "Trust Score", icon: Shield },
-  { id: "identity-graph", label: "Identity Graph", icon: Globe },
-  { id: "face-match", label: "Face Match", icon: Search },
-  { id: "webhooks", label: "Webhooks", icon: Code2 },
-  { id: "sdks", label: "SDKs & Libraries", icon: Book },
+  { id: "getting-started", label: "Getting Started", icon: Zap, keywords: ["quick start", "install", "setup", "base url", "sdk", "npm", "getting started"] },
+  { id: "authentication", label: "Authentication", icon: Key, keywords: ["auth", "bearer", "token", "api key", "authorization", "secret", "credentials"] },
+  { id: "verify-identity", label: "Verify Identity", icon: ShieldCheck, keywords: ["kyc", "document", "passport", "national id", "verify", "identity", "biometric", "aml", "sanctions"] },
+  { id: "trust-score", label: "Trust Score", icon: Shield, keywords: ["trust", "score", "risk", "behavioral", "device reputation", "breakdown"] },
+  { id: "identity-graph", label: "Identity Graph", icon: Globe, keywords: ["graph", "query", "fraud ring", "device", "fingerprint", "connections", "linked accounts"] },
+  { id: "face-match", label: "Face Match", icon: Search, keywords: ["face", "liveness", "deepfake", "biometric", "similarity", "capture", "photo"] },
+  { id: "webhooks", label: "Webhooks", icon: Code2, keywords: ["webhook", "event", "notification", "callback", "verification.completed", "fraud.alert"] },
+  { id: "sdks", label: "SDKs & Libraries", icon: Book, keywords: ["sdk", "node", "python", "go", "ruby", "java", "library", "install", "package"] },
 ];
 
 const CodeBlock = ({ code, language = "bash" }: { code: string; language?: string }) => {
