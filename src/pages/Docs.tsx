@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search, X } from "lucide-react";
