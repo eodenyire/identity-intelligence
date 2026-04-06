@@ -146,7 +146,7 @@ const Docs = () => {
             {filteredSections.length === 0 && (
               <p className="text-xs text-muted-foreground px-3 py-2">No matching sections</p>
             )}
-            {sidebarSections.map((s) => (
+            {filteredSections.map((s) => (
               <button
                 key={s.id}
                 onClick={() => scrollTo(s.id)}
