@@ -189,7 +189,7 @@ const Docs = () => {
             </div>
           )}
           {/* Getting Started */}
-          <section id="getting-started" className="mb-20">
+          {visibleIds.has("getting-started") && <section id="getting-started" className="mb-20">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-3xl sm:text-4xl font-display font-bold mb-4">
                 TrustLayer <span className="text-gradient-primary">API Reference</span>
@@ -223,7 +223,7 @@ console.log(result.trust_score); // 923`} />
           </section>
 
           {/* Authentication */}
-          <section id="authentication" className="mb-20">
+          {visibleIds.has("authentication") && <section id="authentication" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">Authentication</h2>
             <p className="text-muted-foreground mb-6">
               Authenticate requests using a Bearer token in the <code className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs font-mono">Authorization</code> header.
@@ -242,7 +242,7 @@ console.log(result.trust_score); // 923`} />
           </section>
 
           {/* Verify Identity */}
-          <section id="verify-identity" className="mb-20">
+          {visibleIds.has("verify-identity") && <section id="verify-identity" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/verify/identity</h2>
@@ -290,7 +290,7 @@ console.log(result.trust_score); // 923`} />
           </section>
 
           {/* Trust Score */}
-          <section id="trust-score" className="mb-20">
+          {visibleIds.has("trust-score") && <section id="trust-score" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="GET" />
               <h2 className="text-2xl font-display font-bold">/v1/trust-score/{"{user_id}"}</h2>
@@ -318,7 +318,7 @@ console.log(result.trust_score); // 923`} />
           </section>
 
           {/* Identity Graph */}
-          <section id="identity-graph" className="mb-20">
+          {visibleIds.has("identity-graph") && <section id="identity-graph" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/graph/query</h2>
@@ -350,7 +350,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
           </section>
 
           {/* Face Match */}
-          <section id="face-match" className="mb-20">
+          {visibleIds.has("face-match") && <section id="face-match" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/verify/face</h2>
@@ -375,7 +375,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
           </section>
 
           {/* Webhooks */}
-          <section id="webhooks" className="mb-20">
+          {visibleIds.has("webhooks") && <section id="webhooks" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">Webhooks</h2>
             <p className="text-muted-foreground mb-6">
               Receive real-time notifications when verification statuses change or risk flags are triggered.
@@ -410,7 +410,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
           </section>
 
           {/* SDKs */}
-          <section id="sdks" className="mb-20">
+          {visibleIds.has("sdks") && <section id="sdks" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">SDKs & Libraries</h2>
             <p className="text-muted-foreground mb-6">Official SDKs with full TypeScript/type support.</p>
 
