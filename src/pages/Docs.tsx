@@ -220,7 +220,7 @@ const result = await tl.verify.identity({
 console.log(result.trust_score); // 923`} />
               </div>
             </motion.div>
-          </section>
+          </section>}
 
           {/* Authentication */}
           {visibleIds.has("authentication") && <section id="authentication" className="mb-20">
@@ -239,7 +239,7 @@ console.log(result.trust_score); // 923`} />
                 <li><code className="text-primary font-mono text-xs">pk_live_*</code> — Publishable keys for client-side SDKs</li>
               </ul>
             </div>
-          </section>
+          </section>}
 
           {/* Verify Identity */}
           {visibleIds.has("verify-identity") && <section id="verify-identity" className="mb-20">
@@ -287,7 +287,7 @@ console.log(result.trust_score); // 923`} />
   },
   "risk_level": "low"
 }`} />
-          </section>
+          </section>}
 
           {/* Trust Score */}
           {visibleIds.has("trust-score") && <section id="trust-score" className="mb-20">
@@ -315,7 +315,7 @@ console.log(result.trust_score); // 923`} />
   "risk_flags": [],
   "score_trend": "stable"
 }`} />
-          </section>
+          </section>}
 
           {/* Identity Graph */}
           {visibleIds.has("identity-graph") && <section id="identity-graph" className="mb-20">
@@ -347,7 +347,7 @@ result = tl.graph.query(
 
 print(f"Connections: {result.connections}")
 print(f"Fraud probability: {result.fraud_probability}")`} />
-          </section>
+          </section>}
 
           {/* Face Match */}
           {visibleIds.has("face-match") && <section id="face-match" className="mb-20">
@@ -372,7 +372,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
   "deepfake": { "detected": false, "confidence": 0.01 },
   "processing_time_ms": 342
 }`} />
-          </section>
+          </section>}
 
           {/* Webhooks */}
           {visibleIds.has("webhooks") && <section id="webhooks" className="mb-20">
@@ -407,7 +407,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
   },
   "created_at": "2026-03-30T14:22:11Z"
 }`} />
-          </section>
+          </section>}
 
           {/* SDKs */}
           {visibleIds.has("sdks") && <section id="sdks" className="mb-20">
@@ -429,7 +429,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Rate Limits */}
           <div className="glass rounded-2xl p-6 border border-border">
