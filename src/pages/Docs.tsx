@@ -81,6 +81,20 @@ const MethodBadge = ({ method }: { method: string }) => {
 
 const Docs = () => {
   const [activeSection, setActiveSection] = useState("getting-started");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return sidebarSections;
+    const q = searchQuery.toLowerCase();
+    return sidebarSections.filter(
+      (s) =>
+        s.label.toLowerCase().includes(q) ||
+        s.id.includes(q) ||
+        s.keywords.some((k) => k.includes(q))
+    );
+  }, [searchQuery]);
+
+  const visibleIds = useMemo(() => new Set(filteredSections.map((s) => s.id)), [filteredSections]);
 
   const scrollTo = (id: string) => {
     setActiveSection(id);
