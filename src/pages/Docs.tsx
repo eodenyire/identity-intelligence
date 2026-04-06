@@ -82,6 +82,20 @@ const MethodBadge = ({ method }: { method: string }) => {
 const Docs = () => {
   const [activeSection, setActiveSection] = useState("getting-started");
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        const ref = window.innerWidth >= 1024 ? searchInputRef : mobileSearchInputRef;
+        ref.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return sidebarSections;
