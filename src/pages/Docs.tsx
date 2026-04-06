@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search, X } from "lucide-react";
@@ -82,6 +82,20 @@ const MethodBadge = ({ method }: { method: string }) => {
 const Docs = () => {
   const [activeSection, setActiveSection] = useState("getting-started");
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        const ref = window.innerWidth >= 1024 ? searchInputRef : mobileSearchInputRef;
+        ref.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return sidebarSections;
@@ -131,11 +145,15 @@ const Docs = () => {
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search docs..."
+              ref={searchInputRef}
+              placeholder="Search docs…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 h-9 text-sm bg-secondary/30 border-border"
+              className="pl-9 pr-16 h-9 text-sm bg-secondary/30 border-border"
             />
+            {!searchQuery && (
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">⌘K</kbd>
+            )}
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="w-3.5 h-3.5" />
@@ -169,7 +187,8 @@ const Docs = () => {
           <div className="lg:hidden relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search docs..."
+              ref={mobileSearchInputRef}
+              placeholder="Search docs…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 h-10 text-sm bg-secondary/30 border-border"
