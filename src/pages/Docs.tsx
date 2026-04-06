@@ -187,7 +187,8 @@ const Docs = () => {
           <div className="lg:hidden relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search docs..."
+              ref={mobileSearchInputRef}
+              placeholder="Search docs…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 h-10 text-sm bg-secondary/30 border-border"
