@@ -14,6 +14,7 @@ import Analytics from "./pages/Analytics.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import IdentityGraphPage from "./pages/IdentityGraph.tsx";
+import Docs from "./pages/Docs.tsx";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/docs" element={<Docs />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
