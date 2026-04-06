@@ -1,18 +1,19 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search } from "lucide-react";
+import { Shield, ArrowLeft, Copy, Check, Book, Code2, Zap, Key, Globe, ShieldCheck, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const sidebarSections = [
-  { id: "getting-started", label: "Getting Started", icon: Zap },
-  { id: "authentication", label: "Authentication", icon: Key },
-  { id: "verify-identity", label: "Verify Identity", icon: ShieldCheck },
-  { id: "trust-score", label: "Trust Score", icon: Shield },
-  { id: "identity-graph", label: "Identity Graph", icon: Globe },
-  { id: "face-match", label: "Face Match", icon: Search },
-  { id: "webhooks", label: "Webhooks", icon: Code2 },
-  { id: "sdks", label: "SDKs & Libraries", icon: Book },
+  { id: "getting-started", label: "Getting Started", icon: Zap, keywords: ["quick start", "install", "setup", "base url", "sdk", "npm", "getting started"] },
+  { id: "authentication", label: "Authentication", icon: Key, keywords: ["auth", "bearer", "token", "api key", "authorization", "secret", "credentials"] },
+  { id: "verify-identity", label: "Verify Identity", icon: ShieldCheck, keywords: ["kyc", "document", "passport", "national id", "verify", "identity", "biometric", "aml", "sanctions"] },
+  { id: "trust-score", label: "Trust Score", icon: Shield, keywords: ["trust", "score", "risk", "behavioral", "device reputation", "breakdown"] },
+  { id: "identity-graph", label: "Identity Graph", icon: Globe, keywords: ["graph", "query", "fraud ring", "device", "fingerprint", "connections", "linked accounts"] },
+  { id: "face-match", label: "Face Match", icon: Search, keywords: ["face", "liveness", "deepfake", "biometric", "similarity", "capture", "photo"] },
+  { id: "webhooks", label: "Webhooks", icon: Code2, keywords: ["webhook", "event", "notification", "callback", "verification.completed", "fraud.alert"] },
+  { id: "sdks", label: "SDKs & Libraries", icon: Book, keywords: ["sdk", "node", "python", "go", "ruby", "java", "library", "install", "package"] },
 ];
 
 const CodeBlock = ({ code, language = "bash" }: { code: string; language?: string }) => {
@@ -80,6 +81,20 @@ const MethodBadge = ({ method }: { method: string }) => {
 
 const Docs = () => {
   const [activeSection, setActiveSection] = useState("getting-started");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return sidebarSections;
+    const q = searchQuery.toLowerCase();
+    return sidebarSections.filter(
+      (s) =>
+        s.label.toLowerCase().includes(q) ||
+        s.id.includes(q) ||
+        s.keywords.some((k) => k.includes(q))
+    );
+  }, [searchQuery]);
+
+  const visibleIds = useMemo(() => new Set(filteredSections.map((s) => s.id)), [filteredSections]);
 
   const scrollTo = (id: string) => {
     setActiveSection(id);
@@ -113,8 +128,25 @@ const Docs = () => {
       <div className="flex pt-16">
         {/* Sidebar */}
         <aside className="hidden lg:block w-64 fixed top-16 bottom-0 border-r border-border overflow-y-auto p-4">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search docs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9 text-sm bg-secondary/30 border-border"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <nav className="space-y-1">
-            {sidebarSections.map((s) => (
+            {filteredSections.length === 0 && (
+              <p className="text-xs text-muted-foreground px-3 py-2">No matching sections</p>
+            )}
+            {filteredSections.map((s) => (
               <button
                 key={s.id}
                 onClick={() => scrollTo(s.id)}
@@ -133,8 +165,31 @@ const Docs = () => {
 
         {/* Main content */}
         <main className="flex-1 lg:ml-64 px-4 sm:px-8 py-10 max-w-4xl">
+          {/* Mobile search */}
+          <div className="lg:hidden relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search docs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-10 text-sm bg-secondary/30 border-border"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {searchQuery && filteredSections.length === 0 && (
+            <div className="text-center py-20 text-muted-foreground">
+              <Search className="w-10 h-10 mx-auto mb-4 opacity-40" />
+              <p className="text-lg font-medium">No results for "{searchQuery}"</p>
+              <p className="text-sm mt-1">Try searching for "kyc", "webhook", or "sdk"</p>
+            </div>
+          )}
           {/* Getting Started */}
-          <section id="getting-started" className="mb-20">
+          {visibleIds.has("getting-started") && <section id="getting-started" className="mb-20">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-3xl sm:text-4xl font-display font-bold mb-4">
                 TrustLayer <span className="text-gradient-primary">API Reference</span>
@@ -165,10 +220,10 @@ const result = await tl.verify.identity({
 console.log(result.trust_score); // 923`} />
               </div>
             </motion.div>
-          </section>
+          </section>}
 
           {/* Authentication */}
-          <section id="authentication" className="mb-20">
+          {visibleIds.has("authentication") && <section id="authentication" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">Authentication</h2>
             <p className="text-muted-foreground mb-6">
               Authenticate requests using a Bearer token in the <code className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs font-mono">Authorization</code> header.
@@ -184,10 +239,10 @@ console.log(result.trust_score); // 923`} />
                 <li><code className="text-primary font-mono text-xs">pk_live_*</code> — Publishable keys for client-side SDKs</li>
               </ul>
             </div>
-          </section>
+          </section>}
 
           {/* Verify Identity */}
-          <section id="verify-identity" className="mb-20">
+          {visibleIds.has("verify-identity") && <section id="verify-identity" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/verify/identity</h2>
@@ -232,10 +287,10 @@ console.log(result.trust_score); // 923`} />
   },
   "risk_level": "low"
 }`} />
-          </section>
+          </section>}
 
           {/* Trust Score */}
-          <section id="trust-score" className="mb-20">
+          {visibleIds.has("trust-score") && <section id="trust-score" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="GET" />
               <h2 className="text-2xl font-display font-bold">/v1/trust-score/{"{user_id}"}</h2>
@@ -260,10 +315,10 @@ console.log(result.trust_score); // 923`} />
   "risk_flags": [],
   "score_trend": "stable"
 }`} />
-          </section>
+          </section>}
 
           {/* Identity Graph */}
-          <section id="identity-graph" className="mb-20">
+          {visibleIds.has("identity-graph") && <section id="identity-graph" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/graph/query</h2>
@@ -292,10 +347,10 @@ result = tl.graph.query(
 
 print(f"Connections: {result.connections}")
 print(f"Fraud probability: {result.fraud_probability}")`} />
-          </section>
+          </section>}
 
           {/* Face Match */}
-          <section id="face-match" className="mb-20">
+          {visibleIds.has("face-match") && <section id="face-match" className="mb-20">
             <div className="flex items-center gap-3 mb-4">
               <MethodBadge method="POST" />
               <h2 className="text-2xl font-display font-bold">/v1/verify/face</h2>
@@ -317,10 +372,10 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
   "deepfake": { "detected": false, "confidence": 0.01 },
   "processing_time_ms": 342
 }`} />
-          </section>
+          </section>}
 
           {/* Webhooks */}
-          <section id="webhooks" className="mb-20">
+          {visibleIds.has("webhooks") && <section id="webhooks" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">Webhooks</h2>
             <p className="text-muted-foreground mb-6">
               Receive real-time notifications when verification statuses change or risk flags are triggered.
@@ -352,10 +407,10 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
   },
   "created_at": "2026-03-30T14:22:11Z"
 }`} />
-          </section>
+          </section>}
 
           {/* SDKs */}
-          <section id="sdks" className="mb-20">
+          {visibleIds.has("sdks") && <section id="sdks" className="mb-20">
             <h2 className="text-2xl font-display font-bold mb-4">SDKs & Libraries</h2>
             <p className="text-muted-foreground mb-6">Official SDKs with full TypeScript/type support.</p>
 
@@ -374,7 +429,7 @@ print(f"Fraud probability: {result.fraud_probability}")`} />
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Rate Limits */}
           <div className="glass rounded-2xl p-6 border border-border">
