@@ -128,7 +128,24 @@ const Docs = () => {
       <div className="flex pt-16">
         {/* Sidebar */}
         <aside className="hidden lg:block w-64 fixed top-16 bottom-0 border-r border-border overflow-y-auto p-4">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search docs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9 text-sm bg-secondary/30 border-border"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <nav className="space-y-1">
+            {filteredSections.length === 0 && (
+              <p className="text-xs text-muted-foreground px-3 py-2">No matching sections</p>
+            )}
             {sidebarSections.map((s) => (
               <button
                 key={s.id}
