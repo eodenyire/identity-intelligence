@@ -11,12 +11,11 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const links = [
-    { label: "Features", href: "#features" },
-    { label: "Architecture", href: "#architecture" },
-    { label: "Pricing", href: "#pricing" },
     { label: "Docs", href: "/docs" },
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Onboarding", href: "/onboarding" },
     { label: "Graph", href: "/identity-graph" },
+    { label: "Webhooks", href: "/webhooks" },
   ];
 
   return (

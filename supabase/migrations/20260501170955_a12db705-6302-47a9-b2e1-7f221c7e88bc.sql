@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.get_session_by_token(TEXT) FROM PUBLIC, anon, authenticated;

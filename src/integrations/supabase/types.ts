@@ -77,15 +77,234 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_documents: {
+        Row: {
+          created_at: string
+          doc_type: Database["public"]["Enums"]["document_type"]
+          face_match_score: number | null
+          id: string
+          liveness_score: number | null
+          mime_type: string | null
+          ocr_data: Json | null
+          session_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type: Database["public"]["Enums"]["document_type"]
+          face_match_score?: number | null
+          id?: string
+          liveness_score?: number | null
+          mime_type?: string | null
+          ocr_data?: Json | null
+          session_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["document_type"]
+          face_match_score?: number | null
+          id?: string
+          liveness_score?: number | null
+          mime_type?: string | null
+          ocr_data?: Json | null
+          session_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_documents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "verification_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_sessions: {
+        Row: {
+          ai_analysis: Json | null
+          completed_at: string | null
+          country: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          expires_at: string
+          id: string
+          id_type: Database["public"]["Enums"]["id_document_type"]
+          public_token: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          trust_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          expires_at?: string
+          id?: string
+          id_type?: Database["public"]["Enums"]["id_document_type"]
+          public_token: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          trust_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          expires_at?: string
+          id?: string
+          id_type?: Database["public"]["Enums"]["id_document_type"]
+          public_token?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          trust_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          delivered_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          session_id: string | null
+          webhook_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          session_id?: string | null
+          webhook_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          session_id?: string | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "verification_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          created_at: string
+          enabled_events: string[]
+          id: string
+          is_active: boolean
+          label: string
+          signing_secret: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled_events?: string[]
+          id?: string
+          is_active?: boolean
+          label: string
+          signing_secret: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled_events?: string[]
+          id?: string
+          is_active?: boolean
+          label?: string
+          signing_secret?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_session_by_token: {
+        Args: { _token: string }
+        Returns: {
+          country: string
+          customer_name: string
+          expires_at: string
+          id: string
+          id_type: Database["public"]["Enums"]["id_document_type"]
+          status: Database["public"]["Enums"]["verification_status"]
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      document_type: "id_front" | "id_back" | "selfie" | "liveness"
+      id_document_type:
+        | "passport"
+        | "national_id"
+        | "drivers_license"
+        | "voter_id"
+      verification_status:
+        | "pending"
+        | "in_progress"
+        | "verified"
+        | "flagged"
+        | "rejected"
+        | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -212,6 +431,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      document_type: ["id_front", "id_back", "selfie", "liveness"],
+      id_document_type: [
+        "passport",
+        "national_id",
+        "drivers_license",
+        "voter_id",
+      ],
+      verification_status: [
+        "pending",
+        "in_progress",
+        "verified",
+        "flagged",
+        "rejected",
+        "expired",
+      ],
+    },
   },
 } as const

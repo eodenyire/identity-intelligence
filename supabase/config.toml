@@ -1,1 +1,10 @@
 project_id = "uudxrquwecvmxnhubvjk"
+
+[functions.verify-identity]
+verify_jwt = false
+
+[functions.dispatch-webhook]
+verify_jwt = false
+
+[functions.get-verification-session]
+verify_jwt = false
