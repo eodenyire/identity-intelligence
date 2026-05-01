@@ -15,6 +15,10 @@ import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import IdentityGraphPage from "./pages/IdentityGraph.tsx";
 import Docs from "./pages/Docs.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
+import OnboardingDetail from "./pages/OnboardingDetail.tsx";
+import Webhooks from "./pages/Webhooks.tsx";
+import Verify from "./pages/Verify.tsx";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,22 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/verify/:token" element={<Verify />} />
+            <Route path="/onboarding" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
+            <Route path="/onboarding/:id" element={
+              <ProtectedRoute>
+                <OnboardingDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/webhooks" element={
+              <ProtectedRoute>
+                <Webhooks />
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
