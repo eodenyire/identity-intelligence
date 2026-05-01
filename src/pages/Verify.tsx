@@ -131,24 +131,22 @@ const Verify = () => {
     if (!session || !files.id_front || !files.selfie) return;
     setStep("submitting");
     try {
-      const uploaded: Array<{ doc_type: string; storage_path: string; mime_type: string }> = [];
+      const uploaded: Array<{ doc_type: string; mime_type: string; inline_b64: string }> = [];
       for (const [k, f] of Object.entries(files)) {
         if (!f) continue;
-        // path namespace: <session_id>/<doc_type>-<ts>.jpg — no auth.uid() prefix because public flow
-        // We use the verifications bucket; since storage policies require auth.uid() in folder name,
-        // we upload via the edge function path instead by base64 streaming through verify-identity.
-        // Simpler: upload directly with the anon role to a session-id path and rely on the verify
-        // edge function to read with service role. For that we need a permissive insert policy
-        // for the public session prefix. We'll upload via edge function instead.
         const buf = await f.arrayBuffer();
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const bytes = new Uint8Array(buf);
+        // chunked btoa for large files
+        let bin = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
         uploaded.push({
           doc_type: k,
-          storage_path: `__inline__/${k}`,
           mime_type: f.type || "image/jpeg",
+          inline_b64: btoa(bin),
         });
-        // Stash inline data on the object so the function receives it
-        (uploaded[uploaded.length - 1] as any).inline_b64 = b64;
       }
 
       const { data, error } = await supabase.functions.invoke("verify-identity", {
