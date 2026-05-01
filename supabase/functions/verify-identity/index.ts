@@ -11,8 +11,8 @@ interface VerifyRequest {
   token: string; // public_token of the session
   documents: Array<{
     doc_type: "id_front" | "id_back" | "selfie" | "liveness";
-    storage_path: string;
     mime_type: string;
+    inline_b64: string; // base64-encoded image bytes
   }>;
 }
 
@@ -22,13 +22,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-async function fileToDataUrl(path: string, mime: string): Promise<string> {
-  const { data, error } = await admin.storage.from("verifications").download(path);
-  if (error || !data) throw new Error(`Failed to download ${path}: ${error?.message}`);
-  const buf = new Uint8Array(await data.arrayBuffer());
-  let bin = "";
-  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-  return `data:${mime};base64,${btoa(bin)}`;
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
 }
 
 async function analyzeWithAI(images: { type: string; dataUrl: string }[]) {
@@ -138,24 +136,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Persist documents
+    await admin.from("verification_sessions").update({ status: "in_progress" }).eq("id", session.id);
+
+    // Upload each document to storage under the operator's user_id folder
+    // (so existing RLS policies let the operator view it later) and persist row.
+    const images: { type: string; dataUrl: string }[] = [];
     for (const d of body.documents) {
+      const ext = d.mime_type.includes("png") ? "png" : "jpg";
+      const path = `${session.user_id}/${session.id}/${d.doc_type}-${Date.now()}.${ext}`;
+      const bytes = b64ToBytes(d.inline_b64);
+      const { error: upErr } = await admin.storage
+        .from("verifications")
+        .upload(path, bytes, { contentType: d.mime_type, upsert: true });
+      if (upErr) console.error("storage upload failed", upErr);
+
       await admin.from("verification_documents").insert({
         session_id: session.id,
         doc_type: d.doc_type,
-        storage_path: d.storage_path,
+        storage_path: path,
         mime_type: d.mime_type,
       });
-    }
 
-    // Mark in_progress
-    await admin.from("verification_sessions").update({ status: "in_progress" }).eq("id", session.id);
-
-    // Build image payloads
-    const images: { type: string; dataUrl: string }[] = [];
-    for (const d of body.documents) {
-      const dataUrl = await fileToDataUrl(d.storage_path, d.mime_type);
-      images.push({ type: d.doc_type, dataUrl });
+      images.push({ type: d.doc_type, dataUrl: `data:${d.mime_type};base64,${d.inline_b64}` });
     }
 
     // Run AI
