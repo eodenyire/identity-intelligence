@@ -50,12 +50,13 @@ const Verify = () => {
   useEffect(() => {
     const load = async () => {
       if (!token) return;
-      // Use public anon to call a generic select via the security definer RPC
-      const { data, error } = await (supabase as any).rpc("get_session_by_token", { _token: token });
-      if (error || !data || data.length === 0) {
-        setError("This verification link is invalid or has expired.");
+      const { data, error } = await supabase.functions.invoke("get-verification-session", {
+        body: { token },
+      });
+      if (error || !data || (data as any).error) {
+        setError((data as any)?.error ?? "This verification link is invalid or has expired.");
       } else {
-        setSession(data[0] as PublicSession);
+        setSession(data as PublicSession);
       }
       setLoading(false);
     };
