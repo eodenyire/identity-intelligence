@@ -49,25 +49,62 @@ const Verify = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!token) return;
-      const { data, error } = await supabase.functions.invoke("get-verification-session", {
-        body: { token },
-      });
-      const payload = data as any;
-      if (error || !payload || payload.error) {
-        const msg = payload?.error ?? "This verification link is invalid or has expired.";
-        if (/expired/i.test(msg)) setExpired(true);
-        setError(msg);
+  const [retrying, setRetrying] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const retryTimerRef = useRef<number | null>(null);
+
+  const loadSession = async (opts: { silent?: boolean } = {}) => {
+    if (!token) return;
+    if (!opts.silent) setRetrying(true);
+    const { data, error } = await supabase.functions.invoke("get-verification-session", {
+      body: { token },
+    });
+    const payload = data as any;
+    if (error || !payload || payload.error) {
+      const msg = payload?.error ?? "This verification link is invalid or has expired.";
+      if (/expired/i.test(msg)) setExpired(true);
+      setError(msg);
+    } else {
+      // Successfully fetched — clear any prior expired/error state if still valid
+      const stillValid = new Date(payload.expires_at) > new Date();
+      setSession(payload as PublicSession);
+      if (stillValid) {
+        setExpired(false);
+        setError(null);
       } else {
-        setSession(payload as PublicSession);
-        if (new Date(payload.expires_at) < new Date()) setExpired(true);
+        setExpired(true);
       }
-      setLoading(false);
-    };
-    load();
+    }
+    setLoading(false);
+    setRetrying(false);
+  };
+
+  useEffect(() => {
+    loadSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Auto-retry with exponential backoff while expired/errored (caps at 5 attempts, 60s)
+  useEffect(() => {
+    if (!expired && !error) {
+      setRetryAttempt(0);
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      return;
+    }
+    if (retryAttempt >= 5) return;
+    const delay = Math.min(60000, 2000 * Math.pow(2, retryAttempt));
+    retryTimerRef.current = window.setTimeout(async () => {
+      setRetryAttempt((a) => a + 1);
+      await loadSession({ silent: true });
+    }, delay);
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expired, error, retryAttempt]);
 
   // Countdown + auto-expire
   useEffect(() => {
