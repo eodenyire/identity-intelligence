@@ -49,25 +49,62 @@ const Verify = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!token) return;
-      const { data, error } = await supabase.functions.invoke("get-verification-session", {
-        body: { token },
-      });
-      const payload = data as any;
-      if (error || !payload || payload.error) {
-        const msg = payload?.error ?? "This verification link is invalid or has expired.";
-        if (/expired/i.test(msg)) setExpired(true);
-        setError(msg);
+  const [retrying, setRetrying] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const retryTimerRef = useRef<number | null>(null);
+
+  const loadSession = async (opts: { silent?: boolean } = {}) => {
+    if (!token) return;
+    if (!opts.silent) setRetrying(true);
+    const { data, error } = await supabase.functions.invoke("get-verification-session", {
+      body: { token },
+    });
+    const payload = data as any;
+    if (error || !payload || payload.error) {
+      const msg = payload?.error ?? "This verification link is invalid or has expired.";
+      if (/expired/i.test(msg)) setExpired(true);
+      setError(msg);
+    } else {
+      // Successfully fetched — clear any prior expired/error state if still valid
+      const stillValid = new Date(payload.expires_at) > new Date();
+      setSession(payload as PublicSession);
+      if (stillValid) {
+        setExpired(false);
+        setError(null);
       } else {
-        setSession(payload as PublicSession);
-        if (new Date(payload.expires_at) < new Date()) setExpired(true);
+        setExpired(true);
       }
-      setLoading(false);
-    };
-    load();
+    }
+    setLoading(false);
+    setRetrying(false);
+  };
+
+  useEffect(() => {
+    loadSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Auto-retry with exponential backoff while expired/errored (caps at 5 attempts, 60s)
+  useEffect(() => {
+    if (!expired && !error) {
+      setRetryAttempt(0);
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      return;
+    }
+    if (retryAttempt >= 5) return;
+    const delay = Math.min(60000, 2000 * Math.pow(2, retryAttempt));
+    retryTimerRef.current = window.setTimeout(async () => {
+      setRetryAttempt((a) => a + 1);
+      await loadSession({ silent: true });
+    }, delay);
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expired, error, retryAttempt]);
 
   // Countdown + auto-expire
   useEffect(() => {
@@ -218,15 +255,58 @@ const Verify = () => {
     );
   }
 
-  if (error || !session) {
+  if (error || !session || expired) {
+    const isExpired = expired;
+    const exhausted = retryAttempt >= 5;
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="glass rounded-xl p-8 max-w-md text-center">
-          <XCircle className="w-12 h-12 text-rose-glow mx-auto mb-4" />
-          <h1 className="text-xl font-display font-bold mb-2">Link unavailable</h1>
-          <p className="text-sm text-muted-foreground">
-            {error ?? "This verification link is no longer valid."}
+          {isExpired ? (
+            <AlertTriangle className="w-12 h-12 text-amber-glow mx-auto mb-4" />
+          ) : (
+            <XCircle className="w-12 h-12 text-rose-glow mx-auto mb-4" />
+          )}
+          <h1 className="text-xl font-display font-bold mb-2">
+            {isExpired ? "Verification link expired" : "Link unavailable"}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            {isExpired
+              ? "This verification link is no longer valid. Please contact the requesting institution to receive a new link."
+              : (error ?? "This verification link is no longer valid.")}
           </p>
+          {session?.expires_at && isExpired && (
+            <p className="text-xs font-mono text-muted-foreground mb-4">
+              EXPIRED {new Date(session.expires_at).toLocaleString()}
+            </p>
+          )}
+          <div className="flex flex-col items-center gap-2">
+            <Button
+              variant="hero-outline"
+              size="sm"
+              disabled={retrying}
+              onClick={() => {
+                setRetryAttempt(0);
+                loadSession();
+              }}
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Checking…
+                </>
+              ) : (
+                <>Try again</>
+              )}
+            </Button>
+            {!exhausted ? (
+              <p className="text-xs text-muted-foreground">
+                Auto-retrying… (attempt {retryAttempt + 1} / 5)
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Auto-retry stopped. Tap to check again.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -240,23 +320,6 @@ const Verify = () => {
           <h1 className="text-xl font-display font-bold mb-2">Already submitted</h1>
           <p className="text-sm text-muted-foreground">
             Thank you. This verification has already been completed.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (expired) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="glass rounded-xl p-8 max-w-md text-center">
-          <AlertTriangle className="w-12 h-12 text-amber-glow mx-auto mb-4" />
-          <h1 className="text-xl font-display font-bold mb-2">Verification link expired</h1>
-          <p className="text-sm text-muted-foreground mb-4">
-            This verification link is no longer valid. Please contact the requesting institution to receive a new link.
-          </p>
-          <p className="text-xs font-mono text-muted-foreground">
-            EXPIRED {new Date(session.expires_at).toLocaleString()}
           </p>
         </div>
       </div>
