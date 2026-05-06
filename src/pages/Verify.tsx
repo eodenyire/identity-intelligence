@@ -246,6 +246,23 @@ const Verify = () => {
     );
   }
 
+  if (expired) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="glass rounded-xl p-8 max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-glow mx-auto mb-4" />
+          <h1 className="text-xl font-display font-bold mb-2">Verification link expired</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            This verification link is no longer valid. Please contact the requesting institution to receive a new link.
+          </p>
+          <p className="text-xs font-mono text-muted-foreground">
+            EXPIRED {new Date(session.expires_at).toLocaleString()}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Brand bar */}
@@ -257,7 +274,14 @@ const Verify = () => {
               Trust<span className="text-gradient-primary">Layer</span>
             </span>
           </Link>
-          <span className="text-xs font-mono text-muted-foreground">SECURE VERIFICATION</span>
+          <div className="flex items-center gap-3 text-xs font-mono">
+            {timeLeft && (
+              <span className="text-muted-foreground">
+                EXPIRES IN <span className="text-primary">{timeLeft}</span>
+              </span>
+            )}
+            <span className="text-muted-foreground hidden sm:inline">SECURE VERIFICATION</span>
+          </div>
         </div>
       </div>
 
