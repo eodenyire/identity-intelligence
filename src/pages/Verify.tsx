@@ -42,6 +42,8 @@ const Verify = () => {
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ status: string; trust_score: number; analysis: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
