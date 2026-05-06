@@ -55,15 +55,46 @@ const Verify = () => {
       const { data, error } = await supabase.functions.invoke("get-verification-session", {
         body: { token },
       });
-      if (error || !data || (data as any).error) {
-        setError((data as any)?.error ?? "This verification link is invalid or has expired.");
+      const payload = data as any;
+      if (error || !payload || payload.error) {
+        const msg = payload?.error ?? "This verification link is invalid or has expired.";
+        if (/expired/i.test(msg)) setExpired(true);
+        setError(msg);
       } else {
-        setSession(data as PublicSession);
+        setSession(payload as PublicSession);
+        if (new Date(payload.expires_at) < new Date()) setExpired(true);
       }
       setLoading(false);
     };
     load();
   }, [token]);
+
+  // Countdown + auto-expire
+  useEffect(() => {
+    if (!session) return;
+    const tick = () => {
+      const ms = new Date(session.expires_at).getTime() - Date.now();
+      if (ms <= 0) {
+        setExpired(true);
+        setTimeLeft("00:00");
+        return;
+      }
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setTimeLeft(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [session]);
+
+  // Stop camera when expired
+  useEffect(() => {
+    if (expired && streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, [expired]);
 
   // Camera lifecycle for selfie step
   useEffect(() => {
