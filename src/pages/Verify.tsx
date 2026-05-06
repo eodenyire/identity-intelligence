@@ -163,6 +163,14 @@ const Verify = () => {
 
   const submit = async () => {
     if (!session || !files.id_front || !files.selfie) return;
+    if (expired) {
+      toast({
+        title: "Link expired",
+        description: "This verification link is no longer valid.",
+        variant: "destructive",
+      });
+      return;
+    }
     setStep("submitting");
     try {
       const uploaded: Array<{ doc_type: string; mime_type: string; inline_b64: string }> = [];
