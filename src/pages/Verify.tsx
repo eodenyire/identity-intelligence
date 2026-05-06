@@ -199,9 +199,11 @@ const Verify = () => {
       setResult(data as any);
       setStep("done");
     } catch (e: any) {
+      const msg = e?.message ?? "Please try again.";
+      if (/expired/i.test(msg)) setExpired(true);
       toast({
         title: "Verification failed",
-        description: e?.message ?? "Please try again.",
+        description: msg,
         variant: "destructive",
       });
       setStep("selfie");
