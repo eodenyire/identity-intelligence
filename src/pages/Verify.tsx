@@ -42,6 +42,8 @@ const Verify = () => {
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ status: string; trust_score: number; analysis: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,15 +55,46 @@ const Verify = () => {
       const { data, error } = await supabase.functions.invoke("get-verification-session", {
         body: { token },
       });
-      if (error || !data || (data as any).error) {
-        setError((data as any)?.error ?? "This verification link is invalid or has expired.");
+      const payload = data as any;
+      if (error || !payload || payload.error) {
+        const msg = payload?.error ?? "This verification link is invalid or has expired.";
+        if (/expired/i.test(msg)) setExpired(true);
+        setError(msg);
       } else {
-        setSession(data as PublicSession);
+        setSession(payload as PublicSession);
+        if (new Date(payload.expires_at) < new Date()) setExpired(true);
       }
       setLoading(false);
     };
     load();
   }, [token]);
+
+  // Countdown + auto-expire
+  useEffect(() => {
+    if (!session) return;
+    const tick = () => {
+      const ms = new Date(session.expires_at).getTime() - Date.now();
+      if (ms <= 0) {
+        setExpired(true);
+        setTimeLeft("00:00");
+        return;
+      }
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setTimeLeft(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [session]);
+
+  // Stop camera when expired
+  useEffect(() => {
+    if (expired && streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, [expired]);
 
   // Camera lifecycle for selfie step
   useEffect(() => {
@@ -130,6 +163,14 @@ const Verify = () => {
 
   const submit = async () => {
     if (!session || !files.id_front || !files.selfie) return;
+    if (expired) {
+      toast({
+        title: "Link expired",
+        description: "This verification link is no longer valid.",
+        variant: "destructive",
+      });
+      return;
+    }
     setStep("submitting");
     try {
       const uploaded: Array<{ doc_type: string; mime_type: string; inline_b64: string }> = [];
@@ -158,9 +199,11 @@ const Verify = () => {
       setResult(data as any);
       setStep("done");
     } catch (e: any) {
+      const msg = e?.message ?? "Please try again.";
+      if (/expired/i.test(msg)) setExpired(true);
       toast({
         title: "Verification failed",
-        description: e?.message ?? "Please try again.",
+        description: msg,
         variant: "destructive",
       });
       setStep("selfie");
@@ -203,6 +246,23 @@ const Verify = () => {
     );
   }
 
+  if (expired) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="glass rounded-xl p-8 max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-glow mx-auto mb-4" />
+          <h1 className="text-xl font-display font-bold mb-2">Verification link expired</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            This verification link is no longer valid. Please contact the requesting institution to receive a new link.
+          </p>
+          <p className="text-xs font-mono text-muted-foreground">
+            EXPIRED {new Date(session.expires_at).toLocaleString()}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Brand bar */}
@@ -214,7 +274,14 @@ const Verify = () => {
               Trust<span className="text-gradient-primary">Layer</span>
             </span>
           </Link>
-          <span className="text-xs font-mono text-muted-foreground">SECURE VERIFICATION</span>
+          <div className="flex items-center gap-3 text-xs font-mono">
+            {timeLeft && (
+              <span className="text-muted-foreground">
+                EXPIRES IN <span className="text-primary">{timeLeft}</span>
+              </span>
+            )}
+            <span className="text-muted-foreground hidden sm:inline">SECURE VERIFICATION</span>
+          </div>
         </div>
       </div>
 
