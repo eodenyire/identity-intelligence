@@ -115,12 +115,78 @@ const OnboardingDetail = () => {
       if (signed) urls[doc.id] = signed.signedUrl;
     }
     setDocUrls(urls);
+
+    // Compliance screening (latest)
+    const { data: scr } = await supabase
+      .from("compliance_screenings")
+      .select("*")
+      .eq("session_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setScreening((scr as Screening) ?? null);
+
+    // Issued credential
+    const { data: cred } = await supabase
+      .from("identity_credentials")
+      .select("id,credential_id,jwt,issued_at,expires_at,revoked_at")
+      .eq("session_id", id)
+      .order("issued_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setCredential((cred as Credential) ?? null);
+
     setLoading(false);
   };
 
   useEffect(() => {
     load();
   }, [id]);
+
+  const runAml = async () => {
+    if (!session) return;
+    setAmlRunning(true);
+    const { error } = await supabase.functions.invoke("aml-screen", {
+      body: { session_id: session.id },
+    });
+    setAmlRunning(false);
+    if (error) {
+      toast({ title: "AML screening failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "AML screening complete" });
+    load();
+  };
+
+  const issueCredential = async () => {
+    if (!session) return;
+    setIssuing(true);
+    const { error } = await supabase.functions.invoke("issue-credential", {
+      body: { session_id: session.id },
+    });
+    setIssuing(false);
+    if (error) {
+      toast({ title: "Failed to issue", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Credential issued" });
+    load();
+  };
+
+  const gdprDelete = async () => {
+    if (!session) return;
+    if (!confirm(`Permanently erase all data for ${session.customer_name}? This cannot be undone.`))
+      return;
+    const { error } = await supabase.functions.invoke("gdpr-delete", {
+      body: { session_id: session.id },
+    });
+    if (error) {
+      toast({ title: "Erase failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Session erased" });
+    navigate("/onboarding");
+  };
 
   const updateStatus = async (newStatus: "verified" | "rejected") => {
     if (!session) return;
@@ -145,6 +211,9 @@ const OnboardingDetail = () => {
         event_type: `verification.${newStatus}`,
       },
     });
+    if (newStatus === "verified") {
+      supabase.functions.invoke("issue-credential", { body: { session_id: session.id } });
+    }
     load();
   };
 
