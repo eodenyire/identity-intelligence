@@ -19,7 +19,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.gdpr-export]
-verify_jwt = true
+verify_jwt = false
 
 [functions.gdpr-delete]
-verify_jwt = true
+verify_jwt = false
