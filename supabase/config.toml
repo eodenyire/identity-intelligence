@@ -8,3 +8,18 @@ verify_jwt = false
 
 [functions.get-verification-session]
 verify_jwt = false
+
+[functions.aml-screen]
+verify_jwt = false
+
+[functions.issue-credential]
+verify_jwt = false
+
+[functions.verify-credential]
+verify_jwt = false
+
+[functions.gdpr-export]
+verify_jwt = true
+
+[functions.gdpr-delete]
+verify_jwt = true
