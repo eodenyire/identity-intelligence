@@ -17,6 +17,13 @@ import {
   Mail,
   Phone,
   MapPin,
+  ShieldAlert,
+  Wallet as WalletIcon,
+  Copy,
+  Check,
+  Trash2,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 interface Session {
