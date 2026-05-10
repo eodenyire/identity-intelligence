@@ -203,6 +203,22 @@ Deno.serve(async (req) => {
       })
       .eq("id", session.id);
 
+    // Fire-and-forget AML/PEP screening (always runs after analysis)
+    EdgeRuntime.waitUntil(
+      admin.functions
+        .invoke("aml-screen", { body: { session_id: session.id } })
+        .catch((e) => console.error("aml-screen failed", e)),
+    );
+
+    // Auto-issue identity credential when verified
+    if (status === "verified") {
+      EdgeRuntime.waitUntil(
+        admin.functions
+          .invoke("issue-credential", { body: { session_id: session.id } })
+          .catch((e) => console.error("issue-credential failed", e)),
+      );
+    }
+
     // Fire-and-forget webhook dispatch
     const eventType = `verification.${status}`;
     EdgeRuntime.waitUntil(

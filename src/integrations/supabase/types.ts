@@ -47,6 +47,154 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compliance_screenings: {
+        Row: {
+          adverse_media_hits: number
+          created_at: string
+          hits: Json | null
+          id: string
+          pep_hits: number
+          provider: string
+          query_country: string | null
+          query_name: string
+          raw_response: Json | null
+          risk_level: string
+          sanctions_hits: number
+          session_id: string
+          top_match_score: number | null
+          total_hits: number
+          user_id: string
+        }
+        Insert: {
+          adverse_media_hits?: number
+          created_at?: string
+          hits?: Json | null
+          id?: string
+          pep_hits?: number
+          provider?: string
+          query_country?: string | null
+          query_name: string
+          raw_response?: Json | null
+          risk_level?: string
+          sanctions_hits?: number
+          session_id: string
+          top_match_score?: number | null
+          total_hits?: number
+          user_id: string
+        }
+        Update: {
+          adverse_media_hits?: number
+          created_at?: string
+          hits?: Json | null
+          id?: string
+          pep_hits?: number
+          provider?: string
+          query_country?: string | null
+          query_name?: string
+          raw_response?: Json | null
+          risk_level?: string
+          sanctions_hits?: number
+          session_id?: string
+          top_match_score?: number | null
+          total_hits?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_screenings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "verification_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identity_credentials: {
+        Row: {
+          claims: Json
+          credential_id: string
+          expires_at: string
+          id: string
+          issued_at: string
+          jwt: string
+          revoked_at: string | null
+          session_id: string
+          subject_country: string | null
+          subject_name: string
+          trust_score: number | null
+          user_id: string
+        }
+        Insert: {
+          claims: Json
+          credential_id: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          jwt: string
+          revoked_at?: string | null
+          session_id: string
+          subject_country?: string | null
+          subject_name: string
+          trust_score?: number | null
+          user_id: string
+        }
+        Update: {
+          claims?: Json
+          credential_id?: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          jwt?: string
+          revoked_at?: string | null
+          session_id?: string
+          subject_country?: string | null
+          subject_name?: string
+          trust_score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_credentials_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "verification_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
