@@ -49,6 +49,28 @@ interface Doc {
   storage_path: string;
 }
 
+interface Screening {
+  id: string;
+  risk_level: string;
+  total_hits: number;
+  sanctions_hits: number;
+  pep_hits: number;
+  adverse_media_hits: number;
+  top_match_score: number | null;
+  query_name: string;
+  hits: any[] | null;
+  created_at: string;
+}
+
+interface Credential {
+  id: string;
+  credential_id: string;
+  jwt: string;
+  issued_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+}
+
 const OnboardingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -58,6 +80,11 @@ const OnboardingDetail = () => {
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
+  const [screening, setScreening] = useState<Screening | null>(null);
+  const [credential, setCredential] = useState<Credential | null>(null);
+  const [amlRunning, setAmlRunning] = useState(false);
+  const [issuing, setIssuing] = useState(false);
+  const [credCopied, setCredCopied] = useState(false);
 
   const load = async () => {
     if (!id) return;
