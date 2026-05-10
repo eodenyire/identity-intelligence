@@ -6,7 +6,7 @@ import Navbar from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Building2, Save, Loader2, Camera } from "lucide-react";
+import { User, Building2, Save, Loader2, Camera, Download, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -202,6 +202,58 @@ const Settings = () => {
             )}
             Save Changes
           </Button>
+        </motion.div>
+
+        {/* GDPR */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass rounded-xl p-6 mt-6 space-y-4"
+        >
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold">Privacy & Compliance</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Exercise your data rights under GDPR. Export everything we store about you and your
+            verification subjects, or permanently erase a verification session.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="hero-outline"
+              size="sm"
+              onClick={async () => {
+                const { data: s } = await supabase.auth.getSession();
+                const token = s.session?.access_token;
+                if (!token) return toast.error("Not authenticated");
+                const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+                const url = `https://${projectId}.supabase.co/functions/v1/gdpr-export`;
+                const res = await fetch(url, {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) return toast.error("Export failed");
+                const blob = await res.blob();
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `trustlayer-export-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                toast.success("Export downloaded");
+              }}
+            >
+              <Download className="w-4 h-4" /> Export my data (JSON)
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/onboarding">
+                <Trash2 className="w-4 h-4" /> Erase a session…
+              </a>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            To erase a single verification, open the session and use “Erase under GDPR”.
+          </p>
         </motion.div>
       </div>
     </div>
