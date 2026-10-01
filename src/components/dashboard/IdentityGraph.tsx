@@ -106,6 +106,20 @@ const IdentityGraph = ({ nodes = sampleNodes, edges = sampleEdges }: Props) => {
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
 
+  // Sync positions when the node set changes (e.g. async data load)
+  useEffect(() => {
+    setPositions((prev) => {
+      const next = { ...prev };
+      nodes.forEach((n) => {
+        if (!next[n.id]) next[n.id] = { x: n.x, y: n.y };
+      });
+      Object.keys(next).forEach((id) => {
+        if (!nodes.find((n) => n.id === id)) delete next[id];
+      });
+      return next;
+    });
+  }, [nodes]);
+
   const getPos = (id: string) => positions[id] || { x: 0, y: 0 };
 
   const handleMouseDown = useCallback(
