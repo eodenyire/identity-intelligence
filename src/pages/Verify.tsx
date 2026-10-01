@@ -492,12 +492,12 @@ const Verify = () => {
                     <Button variant="hero-outline" size="lg" onClick={() => onFile("selfie", null)}>
                       Retake
                     </Button>
-                    <Button variant="hero" size="lg" className="flex-1" onClick={submit}>
-                      Submit Verification
+                    <Button variant="hero" size="lg" className="flex-1" onClick={() => setStep("liveness")}>
+                      Continue <ChevronRight className="w-4 h-4" />
                     </Button>
                   </>
                 ) : (
-                  <Button variant="hero" size="lg" className="flex-1" onClick={captureSelfie}>
+                  <Button variant="hero" size="lg" className="flex-1" onClick={() => capturePhoto("selfie")}>
                     <Camera className="w-4 h-4" /> Capture
                   </Button>
                 )}
@@ -512,6 +512,58 @@ const Verify = () => {
                   onChange={(e) => onFile("selfie", e.target.files?.[0] ?? null)}
                 />
               </label>
+            </motion.div>
+          )}
+
+          {step === "liveness" && (
+            <motion.div
+              key="liveness"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="glass rounded-xl p-8"
+            >
+              <div className="flex items-center gap-2 mb-2 text-xs font-mono text-primary">
+                <ScanFace className="w-3.5 h-3.5" /> LIVENESS CHECK
+              </div>
+              <h2 className="text-2xl font-display font-bold mb-2">One quick challenge</h2>
+              <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                <span className="text-2xl">{challenge.icon}</span>
+                <p className="text-sm font-semibold text-foreground">{challenge.label}</p>
+              </div>
+
+              <div className="aspect-square rounded-xl overflow-hidden bg-secondary/30 mb-4 relative">
+                {previews.liveness ? (
+                  <img src={previews.liveness} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                )}
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="absolute inset-4 border-2 border-violet-glow/40 rounded-full pointer-events-none" />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="ghost" size="lg" onClick={() => setStep("selfie")}>
+                  Back
+                </Button>
+                {previews.liveness ? (
+                  <>
+                    <Button variant="hero-outline" size="lg" onClick={() => onFile("liveness", null)}>
+                      Retake
+                    </Button>
+                    <Button variant="hero" size="lg" className="flex-1" onClick={submit}>
+                      Submit Verification
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="hero" size="lg" className="flex-1" onClick={() => capturePhoto("liveness")}>
+                    <Camera className="w-4 h-4" /> Capture
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                This proves you're a live person, not a photo or deepfake.
+              </p>
             </motion.div>
           )}
 
