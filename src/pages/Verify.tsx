@@ -40,8 +40,10 @@ const Verify = () => {
     id_front: null,
     id_back: null,
     selfie: null,
+    liveness: null,
   });
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [challenge, setChallenge] = useState(() => randomChallenge());
   const [result, setResult] = useState<{ status: string; trust_score: number; analysis: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
@@ -135,9 +137,9 @@ const Verify = () => {
     }
   }, [expired]);
 
-  // Camera lifecycle for selfie step
+  // Camera lifecycle for selfie + liveness steps
   useEffect(() => {
-    if (step !== "selfie") {
+    if (step !== "selfie" && step !== "liveness") {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -170,7 +172,7 @@ const Verify = () => {
     };
   }, [step, toast]);
 
-  const captureSelfie = () => {
+  const capturePhoto = (key: string) => {
     if (!videoRef.current || !canvasRef.current) return;
     const v = videoRef.current;
     const c = canvasRef.current;
@@ -181,8 +183,8 @@ const Verify = () => {
     ctx.drawImage(v, 0, 0);
     c.toBlob((blob) => {
       if (!blob) return;
-      const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-      onFile("selfie", file);
+      const file = new File([blob], `${key}-${Date.now()}.jpg`, { type: "image/jpeg" });
+      onFile(key, file);
     }, "image/jpeg", 0.9);
   };
 
@@ -231,7 +233,13 @@ const Verify = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("verify-identity", {
-        body: { token, documents: uploaded },
+        body: {
+          token,
+          documents: uploaded,
+          device_fingerprint: getDeviceFingerprint(),
+          device_label: describeDevice(),
+          liveness_challenge: { challenge: challenge.id, passed: !!files.liveness },
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
