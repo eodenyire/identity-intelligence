@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getDeviceFingerprint, describeDevice, randomChallenge } from "@/lib/kyc";
 import {
   Shield,
   Camera,
@@ -15,6 +16,7 @@ import {
   User,
   ChevronRight,
   AlertTriangle,
+  ScanFace,
 } from "lucide-react";
 
 interface PublicSession {
@@ -26,7 +28,7 @@ interface PublicSession {
   expires_at: string;
 }
 
-type Step = "intro" | "id_front" | "id_back" | "selfie" | "submitting" | "done";
+type Step = "intro" | "id_front" | "id_back" | "selfie" | "liveness" | "submitting" | "done";
 
 const Verify = () => {
   const { token } = useParams();
