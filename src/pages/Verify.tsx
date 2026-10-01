@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getDeviceFingerprint, describeDevice, randomChallenge } from "@/lib/kyc";
 import {
   Shield,
   Camera,
@@ -15,6 +16,7 @@ import {
   User,
   ChevronRight,
   AlertTriangle,
+  ScanFace,
 } from "lucide-react";
 
 interface PublicSession {
@@ -26,7 +28,7 @@ interface PublicSession {
   expires_at: string;
 }
 
-type Step = "intro" | "id_front" | "id_back" | "selfie" | "submitting" | "done";
+type Step = "intro" | "id_front" | "id_back" | "selfie" | "liveness" | "submitting" | "done";
 
 const Verify = () => {
   const { token } = useParams();
@@ -38,8 +40,10 @@ const Verify = () => {
     id_front: null,
     id_back: null,
     selfie: null,
+    liveness: null,
   });
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [challenge, setChallenge] = useState(() => randomChallenge());
   const [result, setResult] = useState<{ status: string; trust_score: number; analysis: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
@@ -133,9 +137,9 @@ const Verify = () => {
     }
   }, [expired]);
 
-  // Camera lifecycle for selfie step
+  // Camera lifecycle for selfie + liveness steps
   useEffect(() => {
-    if (step !== "selfie") {
+    if (step !== "selfie" && step !== "liveness") {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -168,7 +172,7 @@ const Verify = () => {
     };
   }, [step, toast]);
 
-  const captureSelfie = () => {
+  const capturePhoto = (key: string) => {
     if (!videoRef.current || !canvasRef.current) return;
     const v = videoRef.current;
     const c = canvasRef.current;
@@ -179,8 +183,8 @@ const Verify = () => {
     ctx.drawImage(v, 0, 0);
     c.toBlob((blob) => {
       if (!blob) return;
-      const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-      onFile("selfie", file);
+      const file = new File([blob], `${key}-${Date.now()}.jpg`, { type: "image/jpeg" });
+      onFile(key, file);
     }, "image/jpeg", 0.9);
   };
 
@@ -229,7 +233,13 @@ const Verify = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("verify-identity", {
-        body: { token, documents: uploaded },
+        body: {
+          token,
+          documents: uploaded,
+          device_fingerprint: getDeviceFingerprint(),
+          device_label: describeDevice(),
+          liveness_challenge: { challenge: challenge.id, passed: !!files.liveness },
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -482,12 +492,12 @@ const Verify = () => {
                     <Button variant="hero-outline" size="lg" onClick={() => onFile("selfie", null)}>
                       Retake
                     </Button>
-                    <Button variant="hero" size="lg" className="flex-1" onClick={submit}>
-                      Submit Verification
+                    <Button variant="hero" size="lg" className="flex-1" onClick={() => setStep("liveness")}>
+                      Continue <ChevronRight className="w-4 h-4" />
                     </Button>
                   </>
                 ) : (
-                  <Button variant="hero" size="lg" className="flex-1" onClick={captureSelfie}>
+                  <Button variant="hero" size="lg" className="flex-1" onClick={() => capturePhoto("selfie")}>
                     <Camera className="w-4 h-4" /> Capture
                   </Button>
                 )}
@@ -502,6 +512,58 @@ const Verify = () => {
                   onChange={(e) => onFile("selfie", e.target.files?.[0] ?? null)}
                 />
               </label>
+            </motion.div>
+          )}
+
+          {step === "liveness" && (
+            <motion.div
+              key="liveness"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="glass rounded-xl p-8"
+            >
+              <div className="flex items-center gap-2 mb-2 text-xs font-mono text-primary">
+                <ScanFace className="w-3.5 h-3.5" /> LIVENESS CHECK
+              </div>
+              <h2 className="text-2xl font-display font-bold mb-2">One quick challenge</h2>
+              <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                <span className="text-2xl">{challenge.icon}</span>
+                <p className="text-sm font-semibold text-foreground">{challenge.label}</p>
+              </div>
+
+              <div className="aspect-square rounded-xl overflow-hidden bg-secondary/30 mb-4 relative">
+                {previews.liveness ? (
+                  <img src={previews.liveness} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                )}
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="absolute inset-4 border-2 border-violet-glow/40 rounded-full pointer-events-none" />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="ghost" size="lg" onClick={() => setStep("selfie")}>
+                  Back
+                </Button>
+                {previews.liveness ? (
+                  <>
+                    <Button variant="hero-outline" size="lg" onClick={() => onFile("liveness", null)}>
+                      Retake
+                    </Button>
+                    <Button variant="hero" size="lg" className="flex-1" onClick={submit}>
+                      Submit Verification
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="hero" size="lg" className="flex-1" onClick={() => capturePhoto("liveness")}>
+                    <Camera className="w-4 h-4" /> Capture
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                This proves you're a live person, not a photo or deepfake.
+              </p>
             </motion.div>
           )}
 
