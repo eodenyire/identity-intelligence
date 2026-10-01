@@ -9,11 +9,12 @@ import {
   Fingerprint,
   Globe,
   Mail,
+  Phone,
   MapPin,
   CreditCard,
 } from "lucide-react";
 
-export type NodeType = "user" | "device" | "email" | "ip" | "location" | "payment" | "fraud_signal";
+export type NodeType = "user" | "device" | "email" | "phone" | "ip" | "location" | "payment" | "fraud_signal";
 
 export interface GraphNode {
   id: string;
@@ -38,6 +39,7 @@ const nodeConfig: Record<NodeType, { icon: React.ElementType; color: string; bg:
   user: { icon: User, color: "hsl(187, 92%, 52%)", bg: "hsl(187, 92%, 52%)" },
   device: { icon: Smartphone, color: "hsl(265, 85%, 60%)", bg: "hsl(265, 85%, 60%)" },
   email: { icon: Mail, color: "hsl(160, 84%, 39%)", bg: "hsl(160, 84%, 39%)" },
+  phone: { icon: Phone, color: "hsl(200, 90%, 55%)", bg: "hsl(200, 90%, 55%)" },
   ip: { icon: Globe, color: "hsl(38, 92%, 50%)", bg: "hsl(38, 92%, 50%)" },
   location: { icon: MapPin, color: "hsl(215, 20%, 55%)", bg: "hsl(215, 20%, 55%)" },
   payment: { icon: CreditCard, color: "hsl(187, 92%, 52%)", bg: "hsl(187, 92%, 52%)" },
