@@ -14,6 +14,9 @@ interface VerifyRequest {
     mime_type: string;
     inline_b64: string; // base64-encoded image bytes
   }>;
+  device_fingerprint?: string;
+  device_label?: string;
+  liveness_challenge?: { challenge: string; passed: boolean };
 }
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -40,6 +43,9 @@ Return a JSON object via the analyze_identity tool call with:
 - document_authenticity_score: 0-100 (signs of tampering, watermarks, fonts)
 - face_match_score: 0-100 (does the selfie match the ID photo)
 - liveness_score: 0-100 (does the selfie look like a real person, not a printout/screen)
+- deepfake_score: 0-100 (likelihood the selfie/liveness frames are AI-generated or manipulated; 0 = clearly real)
+- deepfake_signals: array of strings describing specific deepfake artifacts (e.g. "inconsistent lighting", "warped ear geometry", "GAN texture patterns"), empty if none
+- liveness_challenge_passed: boolean (if a LIVENESS image is present, does it show the requested head movement/expression vs the plain selfie)
 - risk_signals: array of strings describing any red flags
 - recommendation: one of "approve", "review", "reject"
 - reasoning: brief explanation`,
@@ -82,11 +88,14 @@ Return a JSON object via the analyze_identity tool call with:
                 document_authenticity_score: { type: "number" },
                 face_match_score: { type: "number" },
                 liveness_score: { type: "number" },
+                deepfake_score: { type: "number" },
+                deepfake_signals: { type: "array", items: { type: "string" } },
+                liveness_challenge_passed: { type: "boolean" },
                 risk_signals: { type: "array", items: { type: "string" } },
                 recommendation: { type: "string", enum: ["approve", "review", "reject"] },
                 reasoning: { type: "string" },
               },
-              required: ["document_authenticity_score", "face_match_score", "liveness_score", "recommendation", "reasoning"],
+              required: ["document_authenticity_score", "face_match_score", "liveness_score", "deepfake_score", "recommendation", "reasoning"],
             },
           },
         },
@@ -182,15 +191,20 @@ Deno.serve(async (req) => {
       throw e;
     }
 
-    // Compute final trust score (weighted)
+    // Compute final trust score (weighted, deepfake penalty)
     const auth = analysis.document_authenticity_score ?? 0;
     const face = analysis.face_match_score ?? 0;
     const live = analysis.liveness_score ?? 0;
-    const trust = Math.round((auth * 0.35 + face * 0.4 + live * 0.25) * 10); // 0-1000
+    const deepfake = analysis.deepfake_score ?? 0;
+    let trust = Math.round((auth * 0.35 + face * 0.4 + live * 0.25) * 10); // 0-1000
+    // Deepfake penalty: up to -300 for fully synthetic media
+    trust = Math.max(0, trust - Math.round((deepfake / 100) * 300));
+    // Failed liveness challenge caps the score
+    if (analysis.liveness_challenge_passed === false) trust = Math.min(trust, 400);
 
     let status: "verified" | "flagged" | "rejected";
-    if (analysis.recommendation === "approve" && trust >= 700) status = "verified";
-    else if (analysis.recommendation === "reject" || trust < 350) status = "rejected";
+    if (analysis.recommendation === "approve" && trust >= 700 && deepfake < 50) status = "verified";
+    else if (analysis.recommendation === "reject" || trust < 350 || deepfake >= 80) status = "rejected";
     else status = "flagged";
 
     await admin
@@ -199,6 +213,8 @@ Deno.serve(async (req) => {
         status,
         trust_score: trust,
         ai_analysis: analysis,
+        device_fingerprint: body.device_fingerprint ?? null,
+        liveness_challenge: body.liveness_challenge ?? null,
         completed_at: new Date().toISOString(),
       })
       .eq("id", session.id);
