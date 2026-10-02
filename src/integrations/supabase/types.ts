@@ -278,9 +278,11 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          device_fingerprint: string | null
           expires_at: string
           id: string
           id_type: Database["public"]["Enums"]["id_document_type"]
+          liveness_challenge: Json | null
           public_token: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -298,9 +300,11 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          device_fingerprint?: string | null
           expires_at?: string
           id?: string
           id_type?: Database["public"]["Enums"]["id_document_type"]
+          liveness_challenge?: Json | null
           public_token: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -318,9 +322,11 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          device_fingerprint?: string | null
           expires_at?: string
           id?: string
           id_type?: Database["public"]["Enums"]["id_document_type"]
+          liveness_challenge?: Json | null
           public_token?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
