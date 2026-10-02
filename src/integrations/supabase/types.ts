@@ -195,6 +195,33 @@ export type Database = {
           },
         ]
       }
+      partner_organizations: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          license_number: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          license_number?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          license_number?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -221,6 +248,27 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -272,6 +320,7 @@ export type Database = {
       verification_sessions: {
         Row: {
           ai_analysis: Json | null
+          client_ip: string | null
           completed_at: string | null
           country: string | null
           created_at: string
@@ -287,6 +336,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           reviewer_notes: string | null
+          risk_layers: Json | null
           status: Database["public"]["Enums"]["verification_status"]
           trust_score: number | null
           updated_at: string
@@ -294,6 +344,7 @@ export type Database = {
         }
         Insert: {
           ai_analysis?: Json | null
+          client_ip?: string | null
           completed_at?: string | null
           country?: string | null
           created_at?: string
@@ -309,6 +360,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          risk_layers?: Json | null
           status?: Database["public"]["Enums"]["verification_status"]
           trust_score?: number | null
           updated_at?: string
@@ -316,6 +368,7 @@ export type Database = {
         }
         Update: {
           ai_analysis?: Json | null
+          client_ip?: string | null
           completed_at?: string | null
           country?: string | null
           created_at?: string
@@ -331,6 +384,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          risk_layers?: Json | null
           status?: Database["public"]["Enums"]["verification_status"]
           trust_score?: number | null
           updated_at?: string
@@ -444,8 +498,16 @@ export type Database = {
           status: Database["public"]["Enums"]["verification_status"]
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "analyst" | "partner"
       document_type: "id_front" | "id_back" | "selfie" | "liveness"
       id_document_type:
         | "passport"
@@ -586,6 +648,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "analyst", "partner"],
       document_type: ["id_front", "id_back", "selfie", "liveness"],
       id_document_type: [
         "passport",

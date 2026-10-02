@@ -17,6 +17,79 @@ interface VerifyRequest {
   device_fingerprint?: string;
   device_label?: string;
   liveness_challenge?: { challenge: string; passed: boolean };
+  behavior?: {
+    keystroke_intervals_ms?: number[];
+    pointer_events?: number;
+    session_duration_ms?: number;
+    timezone?: string;
+    webdriver?: boolean;
+    touch?: boolean;
+    paste_events?: number;
+  };
+}
+
+const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
+/** Behavioral: keystroke rhythm + interaction realism. 100 = human-like. */
+function behaviorLayer(b: VerifyRequest["behavior"]) {
+  const signals: string[] = [];
+  let score = 80;
+  const ks = (b?.keystroke_intervals_ms ?? []).filter((x) => x > 0 && x < 5000);
+  let mean = 0, cv = 0;
+  if (ks.length >= 5) {
+    mean = ks.reduce((a, c) => a + c, 0) / ks.length;
+    const sd = Math.sqrt(ks.reduce((a, c) => a + (c - mean) ** 2, 0) / ks.length);
+    cv = sd / (mean || 1);
+    if (cv < 0.12) { score -= 35; signals.push("Keystroke timing too uniform (scripted input)"); }
+    if (mean < 35) { score -= 25; signals.push("Superhuman typing speed"); }
+  } else signals.push("Few keystrokes captured");
+  if ((b?.paste_events ?? 0) > 0) { score -= 10; signals.push("Details were pasted"); }
+  if ((b?.pointer_events ?? 0) < 3) { score -= 15; signals.push("Almost no pointer/touch interaction"); }
+  if ((b?.session_duration_ms ?? 0) < 15000) { score -= 20; signals.push("Flow completed implausibly fast"); }
+  return { score: clamp(score), signals, keystrokes: ks.length, mean_interval_ms: Math.round(mean), rhythm_cv: Number(cv.toFixed(2)) };
+}
+
+/** Network: IP geolocation vs declared country and browser timezone. */
+async function networkLayer(ip: string | null, declaredCountry: string | null, tz?: string) {
+  const signals: string[] = [];
+  let score = 85;
+  let geo: any = null;
+  if (ip) {
+    try {
+      const r = await fetch(`https://ipwho.is/${ip}`);
+      if (r.ok) geo = await r.json();
+    } catch { /* ignore */ }
+  }
+  if (geo?.success) {
+    const cc = geo.country_code as string;
+    if (declaredCountry && cc && !declaredCountry.toUpperCase().includes(cc) && !(geo.country ?? "").toLowerCase().includes(declaredCountry.toLowerCase())) {
+      score -= 30; signals.push(`IP located in ${geo.country} but declared ${declaredCountry}`);
+    }
+    if (tz && geo.timezone?.id && geo.timezone.id !== tz) {
+      score -= 15; signals.push(`Browser timezone ${tz} ≠ IP timezone ${geo.timezone.id}`);
+    }
+    if (geo.security?.vpn || geo.security?.proxy || geo.security?.tor) { score -= 30; signals.push("VPN/proxy/Tor detected"); }
+    if (/hosting|data ?center|cloud|amazon|google|microsoft|digitalocean|ovh/i.test(geo.connection?.org ?? geo.connection?.isp ?? "")) {
+      score -= 20; signals.push(`Datacenter IP (${geo.connection?.isp ?? "hosting"})`);
+    }
+  } else signals.push("IP geolocation unavailable");
+  return { score: clamp(score), signals, ip_country: geo?.country ?? null, ip_city: geo?.city ?? null, isp: geo?.connection?.isp ?? null };
+}
+
+/** Device: automation flags + fingerprint reuse across other identities. */
+async function deviceLayer(fp: string | undefined, b: VerifyRequest["behavior"], label: string | undefined, sessionId: string, operatorId: string) {
+  const signals: string[] = [];
+  let score = 90;
+  if (b?.webdriver) { score -= 50; signals.push("Browser automation (webdriver) detected"); }
+  if (/headless|phantom|selenium|puppeteer/i.test(label ?? "")) { score -= 40; signals.push("Headless browser user agent"); }
+  let reuse = 0;
+  if (fp) {
+    const { data } = await admin.from("verification_sessions").select("id,customer_name")
+      .eq("device_fingerprint", fp).eq("user_id", operatorId).neq("id", sessionId);
+    reuse = data?.length ?? 0;
+    if (reuse > 0) { score -= Math.min(50, reuse * 20); signals.push(`Device used by ${reuse} other identit${reuse === 1 ? "y" : "ies"}`); }
+  } else { score -= 20; signals.push("No device fingerprint"); }
+  return { score: clamp(score), signals, reuse_count: reuse };
 }
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -191,21 +264,40 @@ Deno.serve(async (req) => {
       throw e;
     }
 
-    // Compute final trust score (weighted, deepfake penalty)
+    // ---- Per-layer scoring (each 0-100) ----
     const auth = analysis.document_authenticity_score ?? 0;
     const face = analysis.face_match_score ?? 0;
     const live = analysis.liveness_score ?? 0;
     const deepfake = analysis.deepfake_score ?? 0;
-    let trust = Math.round((auth * 0.35 + face * 0.4 + live * 0.25) * 10); // 0-1000
-    // Deepfake penalty: up to -300 for fully synthetic media
-    trust = Math.max(0, trust - Math.round((deepfake / 100) * 300));
-    // Failed liveness challenge caps the score
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("cf-connecting-ip");
+    const [network, device] = await Promise.all([
+      networkLayer(ip, session.country, body.behavior?.timezone),
+      deviceLayer(body.device_fingerprint, body.behavior, body.device_label, session.id, session.user_id),
+    ]);
+    const behavior = behaviorLayer(body.behavior);
+    const biometric = clamp(face * 0.6 + live * 0.4 - deepfake * 0.5);
+    const layers = {
+      document: { score: clamp(auth), weight: 0.25 },
+      biometric: { score: biometric, weight: 0.35, deepfake_score: deepfake, liveness_challenge_passed: analysis.liveness_challenge_passed ?? null },
+      behavior: { ...behavior, weight: 0.15 },
+      network: { ...network, weight: 0.1 },
+      device: { ...device, weight: 0.15 },
+    };
+    let trust = Math.round(
+      Object.values(layers).reduce((a, l: any) => a + l.score * l.weight, 0) * 10,
+    ); // 0-1000
     if (analysis.liveness_challenge_passed === false) trust = Math.min(trust, 400);
+    if (device.reuse_count >= 2 || body.behavior?.webdriver) trust = Math.min(trust, 500);
 
     let status: "verified" | "flagged" | "rejected";
     if (analysis.recommendation === "approve" && trust >= 700 && deepfake < 50) status = "verified";
     else if (analysis.recommendation === "reject" || trust < 350 || deepfake >= 80) status = "rejected";
     else status = "flagged";
+
+    const extraSignals = [...behavior.signals, ...network.signals, ...device.signals].filter(
+      (s) => !/unavailable|Few keystrokes/.test(s),
+    );
+    analysis.risk_signals = [...(analysis.risk_signals ?? []), ...extraSignals];
 
     await admin
       .from("verification_sessions")
@@ -213,6 +305,8 @@ Deno.serve(async (req) => {
         status,
         trust_score: trust,
         ai_analysis: analysis,
+        risk_layers: layers,
+        client_ip: ip ?? null,
         device_fingerprint: body.device_fingerprint ?? null,
         liveness_challenge: body.liveness_challenge ?? null,
         completed_at: new Date().toISOString(),
