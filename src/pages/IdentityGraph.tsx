@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/landing/Navbar";
 import IdentityGraph, { GraphNode, GraphEdge } from "@/components/dashboard/IdentityGraph";
+import ClusterAnalyst from "@/components/dashboard/ClusterAnalyst";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ShieldCheck, AlertTriangle, Users, Network, Loader2 } from "lucide-react";
@@ -208,6 +209,15 @@ const IdentityGraphPage = () => {
             <IdentityGraph nodes={nodes} edges={edges} />
           )}
         </motion.div>
+        {sessions && sessions.length > 0 && (
+          <ClusterAnalyst
+            sessions={sessions}
+            suggested={(() => {
+              const shared = new Set(edges.filter((e) => e.suspicious && e.label === "Shared").map((e) => e.source.slice(2)));
+              return sessions.filter((s) => shared.has(s.id)).map((s) => s.id);
+            })()}
+          />
+        )}
       </div>
     </div>
   );
