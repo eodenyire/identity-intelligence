@@ -57,6 +57,39 @@ const Verify = () => {
   const [retryAttempt, setRetryAttempt] = useState(0);
   const retryTimerRef = useRef<number | null>(null);
 
+  // Behavioural signals: typing rhythm, pointer/touch activity, paste, timing
+  const behaviorRef = useRef({ start: Date.now(), lastKey: 0, intervals: [] as number[], pointer: 0, touch: false, paste: 0 });
+  useEffect(() => {
+    const b = behaviorRef.current;
+    const onKey = () => {
+      const now = performance.now();
+      if (b.lastKey) b.intervals.push(Math.round(now - b.lastKey));
+      b.lastKey = now;
+      if (b.intervals.length > 200) b.intervals.shift();
+    };
+    let lastMove = 0;
+    const onPointer = (e: PointerEvent) => {
+      if (e.type === "pointermove") {
+        const now = performance.now();
+        if (now - lastMove < 100) return;
+        lastMove = now;
+      }
+      if (e.pointerType === "touch") b.touch = true;
+      b.pointer++;
+    };
+    const onPaste = () => { b.paste++; };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
+    window.addEventListener("pointermove", onPointer);
+    window.addEventListener("paste", onPaste);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("paste", onPaste);
+    };
+  }, []);
+
   const loadSession = async (opts: { silent?: boolean } = {}) => {
     if (!token) return;
     if (!opts.silent) setRetrying(true);
@@ -239,6 +272,15 @@ const Verify = () => {
           device_fingerprint: getDeviceFingerprint(),
           device_label: describeDevice(),
           liveness_challenge: { challenge: challenge.id, passed: !!files.liveness },
+          behavior: {
+            keystroke_intervals_ms: behaviorRef.current.intervals,
+            pointer_events: behaviorRef.current.pointer,
+            session_duration_ms: Date.now() - behaviorRef.current.start,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            webdriver: !!(navigator as any).webdriver,
+            touch: behaviorRef.current.touch,
+            paste_events: behaviorRef.current.paste,
+          },
         },
       });
       if (error) throw error;
