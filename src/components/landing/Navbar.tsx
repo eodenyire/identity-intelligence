@@ -14,6 +14,7 @@ const Navbar = () => {
     { label: "Docs", href: "/docs" },
     { label: "Dashboard", href: "/dashboard" },
     { label: "Onboarding", href: "/onboarding" },
+    { label: "Partner", href: "/partner" },
     { label: "Graph", href: "/identity-graph" },
     { label: "Wallet", href: "/wallet" },
     { label: "Webhooks", href: "/webhooks" },

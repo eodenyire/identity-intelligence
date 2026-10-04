@@ -20,6 +20,7 @@ import OnboardingDetail from "./pages/OnboardingDetail.tsx";
 import Webhooks from "./pages/Webhooks.tsx";
 import Verify from "./pages/Verify.tsx";
 import Wallet from "./pages/Wallet.tsx";
+import Partner from "./pages/Partner.tsx";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,11 @@ const App = () => (
             <Route path="/webhooks" element={
               <ProtectedRoute>
                 <Webhooks />
+              </ProtectedRoute>
+            } />
+            <Route path="/partner" element={
+              <ProtectedRoute>
+                <Partner />
               </ProtectedRoute>
             } />
             <Route path="/wallet" element={
