@@ -15,50 +15,89 @@ interface ReqBody {
   session_id: string;
 }
 
-async function screen(name: string, country?: string | null) {
-  const body = {
-    queries: {
-      q1: {
-        schema: "Person",
-        properties: {
-          name: [name],
-          ...(country ? { nationality: [country] } : {}),
-        },
-      },
-    },
-  };
-  const url = "https://api.opensanctions.org/match/default?algorithm=name-based&limit=5";
-  const r = await fetch(url, {
+// Normalized hit shape shared by all providers
+interface Hit { id: string; caption: string; score: number; topics: string[]; datasets?: string[]; match?: boolean }
+
+// Provider slots — first one with a configured key wins; free OpenSanctions is the fallback.
+// DILISENSE_API_KEY        → dilisense.com (affordable, PEP + sanctions)
+// COMPLYADVANTAGE_API_KEY  → ComplyAdvantage
+// OPENSANCTIONS_API_KEY    → OpenSanctions commercial (same data, licensed + higher limits)
+async function screenDilisense(key: string, name: string, country?: string | null) {
+  const u = new URL("https://api.dilisense.com/v1/checkIndividual");
+  u.searchParams.set("names", name);
+  if (country) u.searchParams.set("country", country);
+  const r = await fetch(u, { headers: { "x-api-key": key } });
+  if (!r.ok) throw new Error(`Dilisense ${r.status}: ${await r.text()}`);
+  const raw = await r.json();
+  const hits: Hit[] = (raw.found_records ?? []).map((h: any) => ({
+    id: h.id, caption: h.name, score: 0.9,
+    topics: [h.source_type === "SANCTION" ? "sanction" : h.source_type === "PEP" ? "role.pep" : "crime"],
+    datasets: [h.source_id].filter(Boolean),
+  }));
+  return { provider: "dilisense", raw, hits };
+}
+
+async function screenComplyAdvantage(key: string, name: string, country?: string | null) {
+  const r = await fetch("https://api.complyadvantage.com/searches", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Token ${key}` },
+    body: JSON.stringify({
+      search_term: name, fuzziness: 0.6, limit: 10,
+      filters: { types: ["sanction", "warning", "pep", "adverse-media"], ...(country ? { country_codes: [country] } : {}) },
+    }),
+  });
+  if (!r.ok) throw new Error(`ComplyAdvantage ${r.status}: ${await r.text()}`);
+  const raw = await r.json();
+  const hits: Hit[] = (raw.content?.data?.hits ?? []).map((h: any) => {
+    const types: string[] = h.doc?.types ?? [];
+    return {
+      id: h.doc?.id, caption: h.doc?.name, score: h.score ? Math.min(1, h.score / 2) : 0.8,
+      topics: types.map((t) => (t.startsWith("sanction") ? "sanction" : t.startsWith("pep") ? "role.pep" : "crime")),
+    };
+  });
+  return { provider: "complyadvantage", raw, hits };
+}
+
+async function screenOpenSanctions(name: string, country?: string | null, key?: string) {
+  const body = { queries: { q1: { schema: "Person", properties: { name: [name], ...(country ? { nationality: [country] } : {}) } } } };
+  const r = await fetch("https://api.opensanctions.org/match/default?algorithm=name-based&limit=5", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(key ? { Authorization: `ApiKey ${key}` } : {}) },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`OpenSanctions ${r.status}: ${await r.text()}`);
-  return await r.json();
+  const raw = await r.json();
+  const hits: Hit[] = (raw.responses?.q1?.results ?? []).map((h: any) => ({
+    id: h.id, caption: h.caption, score: h.score ?? 0, match: h.match, topics: h.properties?.topics ?? [], datasets: h.datasets,
+  }));
+  return { provider: key ? "opensanctions_pro" : "opensanctions_free", raw, hits };
 }
 
-function classify(results: any[]) {
+async function screen(name: string, country?: string | null) {
+  const dil = Deno.env.get("DILISENSE_API_KEY");
+  const ca = Deno.env.get("COMPLYADVANTAGE_API_KEY");
+  const os = Deno.env.get("OPENSANCTIONS_API_KEY");
+  try {
+    if (dil) return await screenDilisense(dil, name, country);
+    if (ca) return await screenComplyAdvantage(ca, name, country);
+  } catch (e) {
+    console.error("primary AML provider failed, falling back", e);
+  }
+  return await screenOpenSanctions(name, country, os);
+}
+
+function classify(results: Hit[]) {
   let sanctions = 0, pep = 0, adverse = 0, top = 0;
-  const hits = (results ?? []).map((h) => {
-    const topics: string[] = h.properties?.topics ?? [];
-    const score = h.score ?? 0;
-    if (score > top) top = score;
-    if (topics.some((t) => t.startsWith("sanction"))) sanctions++;
-    if (topics.some((t) => t.startsWith("role.pep"))) pep++;
-    if (topics.some((t) => t.includes("crime") || t.includes("debarment"))) adverse++;
-    return {
-      id: h.id,
-      caption: h.caption,
-      score,
-      match: h.match,
-      topics,
-      datasets: h.datasets,
-    };
-  });
+  for (const h of results) {
+    if (h.score > top) top = h.score;
+    if (h.topics.some((t) => t.startsWith("sanction"))) sanctions++;
+    if (h.topics.some((t) => t.startsWith("role.pep"))) pep++;
+    if (h.topics.some((t) => t.includes("crime") || t.includes("debarment"))) adverse++;
+  }
   let risk = "low";
   if (sanctions > 0 || top >= 0.85) risk = "high";
   else if (pep > 0 || adverse > 0 || top >= 0.7) risk = "medium";
-  return { sanctions, pep, adverse, top, hits, risk };
+  return { sanctions, pep, adverse, top, hits: results, risk };
 }
 
 Deno.serve(async (req) => {
@@ -82,8 +121,7 @@ Deno.serve(async (req) => {
     const ocrName = session.ai_analysis?.ocr?.full_name;
     const name = (ocrName && ocrName.length > 2) ? ocrName : session.customer_name;
 
-    const raw = await screen(name, session.country);
-    const results = raw.responses?.q1?.results ?? [];
+    const { provider, raw, hits: results } = await screen(name, session.country);
     const c = classify(results);
 
     const { data: inserted } = await admin
@@ -91,7 +129,7 @@ Deno.serve(async (req) => {
       .insert({
         session_id,
         user_id: session.user_id,
-        provider: "opensanctions",
+        provider,
         query_name: name,
         query_country: session.country,
         total_hits: results.length,
