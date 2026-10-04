@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { statusColor, scoreColor } from "@/lib/kyc";
+import RiskLayersPanel from "@/components/dashboard/RiskLayersPanel";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -291,6 +292,8 @@ const OnboardingDetail = () => {
               </div>
             </div>
           </div>
+
+          <RiskLayersPanel layers={(session as any).risk_layers} trust={session.trust_score} />
 
           {/* AI Analysis */}
           {a ? (
